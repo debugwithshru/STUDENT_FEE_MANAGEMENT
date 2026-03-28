@@ -84,28 +84,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(script);
             });
 
-            const rows = data.table.rows;
-            if (!rows || rows.length === 0) return;
+            const cols = data.table.cols;
+            let idIdx = 0, firstIdx = 1, lastIdx = 2;
 
-            // Detect column indices from the first row (headers)
-            const headerRow = rows[0].c;
-            let idIdx = 0, firstIdx = 1, lastIdx = 2; // Defaults
+            if (cols) {
+                const idCol = cols.findIndex(c => (c.label||'').toLowerCase().includes('student_id'));
+                if (idCol !== -1) idIdx = idCol;
+                const fCol = cols.findIndex(c => (c.label||'').toLowerCase().includes('first'));
+                if (fCol !== -1) firstIdx = fCol;
+                const lCol = cols.findIndex(c => (c.label||'').toLowerCase().includes('last'));
+                if (lCol !== -1) lastIdx = lCol;
+            }
 
-            headerRow.forEach((cell, idx) => {
-                const label = (cell && cell.v) ? String(cell.v).toLowerCase() : '';
-                if (label.includes('student_id') || label.includes('roll')) idIdx = idx;
-                if (label.includes('first')) firstIdx = idx;
-                if (label.includes('last')) lastIdx = idx;
-            });
-
-            // Process data skipping the first row (headers)
-            allStudents = rows.slice(1).map(row => {
+            allStudents = data.table.rows.map(row => {
                 const c = row.c;
                 if (!c || !c[idIdx] || !c[idIdx].v) return null;
                 const sid = String(c[idIdx].v).trim();
+                
+                // Skip if this row is actually the header row
+                if (sid.toLowerCase().includes('student_id')) return null;
+
                 const fname = (c[firstIdx] && c[firstIdx].v) ? String(c[firstIdx].v).trim() : '';
                 const lname = (c[lastIdx] && c[lastIdx].v) ? String(c[lastIdx].v).trim() : '';
                 const fullName = `${fname} ${lname}`.trim();
+                
                 return { id: sid, name: fullName || 'No Name' };
             }).filter(s => s !== null);
 
