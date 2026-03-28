@@ -297,3 +297,71 @@ select {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* Status Toggle Switch */
+.status-toggle-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #eee;
+}
+
+.status-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    min-width: 70px;
+}
+
+.status-label.pending { color: #f39c12; }
+.status-label.cleared { color: #27ae60; }
+
+.status-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+}
+
+.status-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.status-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #f1f2f6;
+    transition: .4s;
+    border-radius: 34px;
+    border: 1px solid #ddd;
+}
+
+.status-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+input:checked + .status-slider {
+    background-color: #27ae60;
+    border-color: #27ae60;
+}
+
+input:checked + .status-slider:before {
+    transform: translateX(30px);
+}

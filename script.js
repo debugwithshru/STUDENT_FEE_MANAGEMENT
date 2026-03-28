@@ -234,7 +234,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="mode-specific-fields" id="inst_${i}_fields">
                     <!-- Dynamic fields based on mode -->
                 </div>
+                <div class="status-toggle-wrapper">
+                    <label class="status-label pending" id="status_label_${i}">PENDING</label>
+                    <label class="status-switch">
+                        <input type="checkbox" name="inst_${i}_status" id="status_toggle_${i}">
+                        <span class="status-slider"></span>
+                    </label>
+                </div>
             `;
+            
+            const statusToggle = block.querySelector(`#status_toggle_${i}`);
+            const statusLabel = block.querySelector(`#status_label_${i}`);
+
+            statusToggle.addEventListener('change', () => {
+                if (statusToggle.checked) {
+                    statusLabel.textContent = 'CLEARED';
+                    statusLabel.className = 'status-label cleared';
+                } else {
+                    statusLabel.textContent = 'PENDING';
+                    statusLabel.className = 'status-label pending';
+                }
+            });
             
             const modeSelect = block.querySelector('.payment-mode');
             const fieldsContainer = block.querySelector('.mode-specific-fields');
@@ -381,7 +401,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (let i = 1; i <= payload.no_of_installments; i++) {
             const mode = formData.get(`inst_${i}_mode`);
-            const inst = { installment_no: i, mode: mode };
+            const status = formData.get(`inst_${i}_status`) === 'on' ? 'Cleared' : 'Pending';
+            const inst = { 
+                installment_no: i, 
+                mode: mode,
+                installment_status: status
+            };
             
             if (mode === 'Cash') {
                 inst.amount = parseFloat(formData.get(`inst_${i}_amount`));
