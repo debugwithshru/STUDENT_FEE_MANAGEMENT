@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Fee Management - Cocoon Group Tuition</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="form-container">
+        <header>
+            <img src="./cocoon logo.webp" alt="Cocoon Logo" class="logo">
+            <h1 class="brand-name">COCOON GROUP TUITION</h1>
+            <h2 class="form-title">STUDENT FEE MANAGEMENT</h2>
+            <p class="form-subtitle">Record and manage student fee installments.</p>
+        </header>
+
+        <form id="feeForm">
+            <!-- Section 1: Identification -->
+            <section>
+                <h3 class="section-title">Student Identification</h3>
+                <div class="grid-row">
+                    <div class="input-group">
+                        <label for="student_id">Student ID / Roll No. <span class="required">*</span></label>
+                        <div class="searchable-dropdown" id="studentDropdown">
+                            <input type="text" id="student_id_search" placeholder="Search Roll No..." autocomplete="off" required>
+                            <div class="dropdown-list" id="studentList">
+                                <div class="dropdown-item loading">Loading students...</div>
+                            </div>
+                            <input type="hidden" id="student_id" name="student_id">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="student_name">Student Name</label>
+                        <input type="text" id="student_name" name="student_name" placeholder="Auto-fills on selection" readonly>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Fee Configuration -->
+            <section>
+                <h3 class="section-title">Fee Configuration</h3>
+                <div class="grid-row">
+                    <div class="input-group">
+                        <label for="net_fee_payable">Net Fee Payable (Total) <span class="required">*</span></label>
+                        <input type="number" id="net_fee_payable" name="net_fee_payable" placeholder="e.g. 50000" required min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="concession_type">Concession Type</label>
+                        <select id="concession_type" name="concession_type">
+                            <option value="None">None</option>
+                            <option value="Discount">Discount</option>
+                            <option value="Waiver">Waiver</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-row">
+                    <div class="input-group">
+                        <label for="concession_amount">Concession Amount</label>
+                        <input type="number" id="concession_amount" name="concession_amount" placeholder="0" min="0" value="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="concession_reason">Concession Reason</label>
+                        <input type="text" id="concession_reason" name="concession_reason" placeholder="Brief reason">
+                    </div>
+                </div>
+                <div class="grid-row">
+                    <div class="input-group">
+                        <label for="total_fee_agreed">Total Fee Agreed (To Pay)</label>
+                        <input type="number" id="total_fee_agreed" name="total_fee_agreed" value="0" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label for="no_of_installments">Number of Installments <span class="required">*</span></label>
+                        <input type="number" id="no_of_installments" name="no_of_installments" placeholder="1" required min="1" max="12">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Dynamic Installments -->
+            <section id="installmentsSection" style="display: none;">
+                <h3 class="section-title">Installment Details</h3>
+                <div class="installments-container" id="installmentsContainer">
+                    <!-- Dynamic Blocks Go Here -->
+                </div>
+                <div id="installmentSumContainer" class="sum-validation-bar" style="margin-top: 20px; padding: 15px; border-radius: 12px; font-weight: 600; display: none;">
+                    Current Total: <span id="currentInstallmentSum">0</span> / <span id="targetAgreedFee">0</span>
+                </div>
+            </section>
+
+            <div id="successOverlay" class="success-overlay">
+                <div class="success-card">
+                    <div class="success-icon">✓</div>
+                    <h2>DATA SUBMITTED</h2>
+                    <p>Student fee record has been successfully updated.</p>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="submit-btn" id="submitBtn">Submit Fee Record</button>
+            </div>
+        </form>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
