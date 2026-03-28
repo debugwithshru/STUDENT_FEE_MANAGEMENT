@@ -84,20 +84,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(script);
             });
 
-            const cols = data.table.cols;
-            let idIdx = cols.findIndex(c => (c.label||'').toLowerCase().includes('student_id'));
-            let firstIdx = cols.findIndex(c => (c.label||'').toLowerCase().includes('first'));
-            let lastIdx = cols.findIndex(c => (c.label||'').toLowerCase().includes('last'));
+            const rows = data.table.rows;
+            if (!rows || rows.length === 0) return;
 
-            if (idIdx === -1) idIdx = 0; // Fallback
+            // Detect column indices from the first row (headers)
+            const headerRow = rows[0].c;
+            let idIdx = 0, firstIdx = 1, lastIdx = 2; // Defaults
 
-            allStudents = data.table.rows.map(row => {
+            headerRow.forEach((cell, idx) => {
+                const label = (cell && cell.v) ? String(cell.v).toLowerCase() : '';
+                if (label.includes('student_id') || label.includes('roll')) idIdx = idx;
+                if (label.includes('first')) firstIdx = idx;
+                if (label.includes('last')) lastIdx = idx;
+            });
+
+            // Process data skipping the first row (headers)
+            allStudents = rows.slice(1).map(row => {
                 const c = row.c;
                 if (!c || !c[idIdx] || !c[idIdx].v) return null;
                 const sid = String(c[idIdx].v).trim();
-                const fname = (firstIdx !== -1 && c[firstIdx] && c[firstIdx].v) ? String(c[firstIdx].v).trim() : '';
-                const lname = (lastIdx !== -1 && c[lastIdx] && c[lastIdx].v) ? String(c[lastIdx].v).trim() : '';
-                return { id: sid, name: `${fname} ${lname}`.trim() || 'Record Found' };
+                const fname = (c[firstIdx] && c[firstIdx].v) ? String(c[firstIdx].v).trim() : '';
+                const lname = (c[lastIdx] && c[lastIdx].v) ? String(c[lastIdx].v).trim() : '';
+                const fullName = `${fname} ${lname}`.trim();
+                return { id: sid, name: fullName || 'No Name' };
             }).filter(s => s !== null);
 
             renderStudentDropdown(allStudents);
