@@ -153,17 +153,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 1B. File to Base64 Helper
-    function fileToBase64(file) {
-        return new Promise((resolve, reject) => {
-            if (!file) return resolve(null);
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-            reader.readAsDataURL(file);
-        });
-    }
-
     // 2. Fee Calculation Logic (Bidirectional)
     function updateConcessionFromAgreed() {
         const net = parseFloat(netFeeInput.value) || 0;
@@ -412,108 +401,71 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 4B. Process Attachments
-        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-        const attachmentPromises = [];
+        // 4B. Build Payload as FormData (Proper Binary Body)
+        const payload = new FormData();
+        
+        // Add Metadata
+        payload.append('student_id', studentIdHidden.value || studentSearchInput.value);
+        payload.append('student_name', studentNameInput.value);
+        payload.append('grade', externalMetadata.grade);
+        payload.append('academic_year', externalMetadata.academic_year);
+        payload.append('branch', externalMetadata.branch);
+        payload.append('net_fee_payable', formData.get('net_fee_payable'));
+        payload.append('concession_type', formData.get('concession_type'));
+        payload.append('concession_amount', formData.get('concession_amount') || 0);
+        payload.append('concession_reason', formData.get('concession_reason') || '');
+        payload.append('total_fee_agreed', totalAgreed);
+        payload.append('no_of_installments', noOfInstallments);
+        payload.append('submission_date', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
 
+        // Add Installments (Flattened)
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        
         for (let i = 1; i <= noOfInstallments; i++) {
             const mode = formData.get(`inst_${i}_mode`);
-            let fileFieldName = '';
-            if (mode === 'UPI') fileFieldName = `inst_${i}_screenshot`;
-            else if (mode === 'Cheque') fileFieldName = `inst_${i}_cheque_copy`;
+            const status = formData.get(`inst_${i}_status`) === 'on' ? 'Cleared' : 'Pending';
+            const amount = formData.get(`inst_${i}_amount`);
 
-            if (fileFieldName) {
-                const fileInput = document.querySelector(`[name="${fileFieldName}"]`);
-                const file = fileInput ? fileInput.files[0] : null;
-                
-                if (file) {
+            payload.append(`inst_${i}_mode`, mode);
+            payload.append(`inst_${i}_status`, status);
+            payload.append(`inst_${i}_amount`, amount);
+
+            if (mode === 'UPI') {
+                payload.append(`inst_${i}_txn_id`, formData.get(`inst_${i}_txn_id`));
+                const file = formData.get(`inst_${i}_screenshot`);
+                if (file && file.size > 0) {
                     if (file.size > MAX_SIZE) {
-                        alert(`File in Installment #${i} is too large (${(file.size/1024/1024).toFixed(2)}MB). Max size is 5MB.`);
-                        btn.disabled = false;
-                        btn.textContent = 'Submit Fee Record';
-                        return;
+                        alert(`UPI Screenshot for Installment #${i} exceeds 5MB.`);
+                        btn.disabled = false; btn.textContent = 'Submit Fee Record'; return;
                     }
-                    // Capture indices to map back to installments
-                    const p = fileToBase64(file).then(base64 => ({ 
-                        index: i, 
-                        base64: base64, 
-                        name: file.name,
-                        type: file.type 
-                    }));
-                    attachmentPromises.push(p);
+                    payload.append(`inst_${i}_file`, file);
+                }
+            } else if (mode === 'Cheque') {
+                payload.append(`inst_${i}_date`, formData.get(`inst_${i}_date`));
+                payload.append(`inst_${i}_cheque_no`, formData.get(`inst_${i}_cheque_no`));
+                payload.append(`inst_${i}_bank`, formData.get(`inst_${i}_bank`));
+                
+                const file = formData.get(`inst_${i}_cheque_copy`);
+                if (file && file.size > 0) {
+                    if (file.size > MAX_SIZE) {
+                        alert(`Cheque Image for Installment #${i} exceeds 5MB.`);
+                        btn.disabled = false; btn.textContent = 'Submit Fee Record'; return;
+                    }
+                    payload.append(`inst_${i}_file`, file);
                 }
             }
         }
 
-        let processedAttachments = [];
-        try {
-            processedAttachments = await Promise.all(attachmentPromises);
-        } catch (err) {
-            console.error('File conversion error:', err);
-            alert('Error processing file attachments.');
-            btn.disabled = false;
-            btn.textContent = 'Submit Fee Record';
-            return;
-        }
-
-        const payload = {
-            student_id: studentIdHidden.value || studentSearchInput.value,
-            student_name: studentNameInput.value,
-            grade: externalMetadata.grade,
-            academic_year: externalMetadata.academic_year,
-            branch: externalMetadata.branch,
-            net_fee_payable: parseFloat(formData.get('net_fee_payable')),
-            concession_type: formData.get('concession_type'),
-            concession_amount: parseFloat(formData.get('concession_amount')) || 0,
-            concession_reason: formData.get('concession_reason'),
-            total_fee_agreed: totalAgreed,
-            no_of_installments: noOfInstallments,
-            installments: [],
-            submission_date: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
-        };
-
-        for (let i = 1; i <= payload.no_of_installments; i++) {
-            const mode = formData.get(`inst_${i}_mode`);
-            const status = formData.get(`inst_${i}_status`) === 'on' ? 'Cleared' : 'Pending';
-            const inst = { 
-                installment_no: i, 
-                mode: mode,
-                installment_status: status
-            };
-            
-            if (mode === 'Cash') {
-                inst.amount = parseFloat(formData.get(`inst_${i}_amount`));
-            } else if (mode === 'UPI') {
-                inst.amount = parseFloat(formData.get(`inst_${i}_amount`));
-                inst.transaction_id = formData.get(`inst_${i}_txn_id`);
-            } else if (mode === 'Cheque') {
-                inst.amount = parseFloat(formData.get(`inst_${i}_amount`));
-                inst.clearance_date = formData.get(`inst_${i}_date`);
-                inst.cheque_no = formData.get(`inst_${i}_cheque_no`);
-                inst.bank_name = formData.get(`inst_${i}_bank`);
-            }
-
-            // Add attachment if it exists for this installment
-            const att = processedAttachments.find(a => a.index === i);
-            if (att) {
-                inst.attachment_base64 = att.base64;
-                inst.attachment_name = att.name;
-                inst.attachment_type = att.type;
-            }
-
-            payload.installments.push(inst);
-        }
-
-        console.log('Submitting Payload:', payload);
+        console.log('Submitting Binary Payload via FormData...');
 
         try {
             const response = await fetch(WEBHOOK_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Bypass CORS for local file testing
-                headers: { 'Content-Type': 'text/plain' }, // Avoid preflight OPTIONS call
-                body: JSON.stringify(payload)
+                mode: 'no-cors', // Maintain local testing compatibility
+                body: payload // Browser handles multipart headers automatically
             });
 
+            // Status 0 represents opaqueredirect/no-cors successful dispatch
             if (response.ok || response.status === 0) {
                 showSuccess();
             } else {
