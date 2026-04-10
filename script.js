@@ -153,6 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 1B. File to Base64 Helper
+    function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) return resolve(null);
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
+
     // 2. Fee Calculation Logic (Bidirectional)
     function updateConcessionFromAgreed() {
         const net = parseFloat(netFeeInput.value) || 0;
@@ -300,6 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Transaction ID <span class="required">*</span></label>
                     <input type="text" name="inst_${index}_txn_id" placeholder="Enter UPI Txn ID" required>
                 </div>
+                <div class="input-group grid-full">
+                    <label>Transaction Screenshot</label>
+                    <input type="file" name="inst_${index}_screenshot" accept="image/jpeg,image/png,application/pdf">
+                    <p class="file-hint">Optional: JPG, PNG or PDF (Max 5MB)</p>
+                </div>
             `;
         } else if (mode === 'Cheque') {
             container.innerHTML = `
@@ -319,6 +335,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Bank Name <span class="required">*</span></label>
                     <input type="text" class="bank-search" name="inst_${index}_bank" placeholder="Search Bank..." required autocomplete="off">
                     <div class="dropdown-list bank-list"></div>
+                </div>
+                <div class="input-group grid-full">
+                    <label>Cheque Image / Copy <span class="required">*</span></label>
+                    <input type="file" name="inst_${index}_cheque_copy" accept="image/jpeg,image/png,application/pdf" required>
+                    <p class="file-hint">Mandatory: JPG, PNG or PDF (Max 5MB)</p>
                 </div>
             `;
             
@@ -379,7 +400,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 4A. Rule: Sum of installments must equal Agreed Fee
         let installmentSum = 0;
-        const tempInstallments = [];
         for (let i = 1; i <= noOfInstallments; i++) {
             const amount = parseFloat(formData.get(`inst_${i}_amount`)) || 0;
             installmentSum += amount;
@@ -392,14 +412,56 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // 4B. Process Attachments
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        const attachmentPromises = [];
+
+        for (let i = 1; i <= noOfInstallments; i++) {
+            const mode = formData.get(`inst_${i}_mode`);
+            let fileFieldName = '';
+            if (mode === 'UPI') fileFieldName = `inst_${i}_screenshot`;
+            else if (mode === 'Cheque') fileFieldName = `inst_${i}_cheque_copy`;
+
+            if (fileFieldName) {
+                const fileInput = document.querySelector(`[name="${fileFieldName}"]`);
+                const file = fileInput ? fileInput.files[0] : null;
+                
+                if (file) {
+                    if (file.size > MAX_SIZE) {
+                        alert(`File in Installment #${i} is too large (${(file.size/1024/1024).toFixed(2)}MB). Max size is 5MB.`);
+                        btn.disabled = false;
+                        btn.textContent = 'Submit Fee Record';
+                        return;
+                    }
+                    // Capture indices to map back to installments
+                    const p = fileToBase64(file).then(base64 => ({ 
+                        index: i, 
+                        base64: base64, 
+                        name: file.name,
+                        type: file.type 
+                    }));
+                    attachmentPromises.push(p);
+                }
+            }
+        }
+
+        let processedAttachments = [];
+        try {
+            processedAttachments = await Promise.all(attachmentPromises);
+        } catch (err) {
+            console.error('File conversion error:', err);
+            alert('Error processing file attachments.');
+            btn.disabled = false;
+            btn.textContent = 'Submit Fee Record';
+            return;
+        }
+
         const payload = {
             student_id: studentIdHidden.value || studentSearchInput.value,
             student_name: studentNameInput.value,
-            // Include Linked Data
             grade: externalMetadata.grade,
             academic_year: externalMetadata.academic_year,
             branch: externalMetadata.branch,
-            // Fee Stats
             net_fee_payable: parseFloat(formData.get('net_fee_payable')),
             concession_type: formData.get('concession_type'),
             concession_amount: parseFloat(formData.get('concession_amount')) || 0,
@@ -430,6 +492,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 inst.cheque_no = formData.get(`inst_${i}_cheque_no`);
                 inst.bank_name = formData.get(`inst_${i}_bank`);
             }
+
+            // Add attachment if it exists for this installment
+            const att = processedAttachments.find(a => a.index === i);
+            if (att) {
+                inst.attachment_base64 = att.base64;
+                inst.attachment_name = att.name;
+                inst.attachment_type = att.type;
+            }
+
             payload.installments.push(inst);
         }
 
@@ -438,11 +509,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(WEBHOOK_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors', // Bypass CORS for local file testing
+                headers: { 'Content-Type': 'text/plain' }, // Avoid preflight OPTIONS call
                 body: JSON.stringify(payload)
             });
 
-            if (response.ok || response.status === 0) { // status 0 for no-cors if needed, but here we expect JSON response
+            if (response.ok || response.status === 0) {
                 showSuccess();
             } else {
                 throw new Error('Failed to submit to webhook');
@@ -460,11 +532,10 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.classList.add('active');
         setTimeout(() => {
             overlay.classList.remove('active');
-            location.reload(); // Refresh to reset
+            location.reload(); 
         }, 3000);
     }
 
-    // Initial load
     checkUrlParams();
     fetchStudents();
 });
