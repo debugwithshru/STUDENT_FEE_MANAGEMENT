@@ -461,15 +461,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch(WEBHOOK_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Maintain local testing compatibility
-                body: payload // Browser handles multipart headers automatically
+                // Removed mode: 'no-cors' to allow proper Content-Type (multipart) parsing in n8n.
+                // Using redirect: 'manual' to prevent browser errors if n8n returns a redirect.
+                redirect: 'manual', 
+                body: payload 
             });
 
-            // Status 0 represents opaqueredirect/no-cors successful dispatch
-            if (response.ok || response.status === 0) {
+            // redirect: 'manual' returns response.type 'opaqueredirect' (status 0) for 302s
+            if (response.ok || response.status === 0 || response.type === 'opaqueredirect') {
                 showSuccess();
             } else {
-                throw new Error('Failed to submit to webhook');
+                throw new Error('Failed to submit: ' + response.status);
             }
         } catch (error) {
             console.error('Submission Error:', error);
