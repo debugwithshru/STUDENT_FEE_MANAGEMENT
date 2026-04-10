@@ -302,8 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="input-group grid-full">
                     <label>Transaction Screenshot</label>
-                    <input type="file" name="inst_${index}_screenshot" accept="image/png">
-                    <p class="file-hint">Optional: PNG only (Max 5MB)</p>
+                    <input type="file" name="inst_${index}_screenshot" accept="image/png,image/jpeg,application/pdf">
+                    <p class="file-hint">Optional: JPG, PNG or PDF (Max 5MB)</p>
                 </div>
             `;
         } else if (mode === 'Cheque') {
@@ -327,8 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="input-group grid-full">
                     <label>Cheque Image / Copy <span class="required">*</span></label>
-                    <input type="file" name="inst_${index}_cheque_copy" accept="image/png" required>
-                    <p class="file-hint">Mandatory: PNG only (Max 5MB)</p>
+                    <input type="file" name="inst_${index}_cheque_copy" accept="image/png,image/jpeg,application/pdf" required>
+                    <p class="file-hint">Mandatory: JPG, PNG or PDF (Max 5MB)</p>
                 </div>
             `;
             
