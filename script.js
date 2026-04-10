@@ -401,25 +401,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 4B. Build Payload: Structured JSON + Binary Files
+        // 4B. Build Payload: Independent Flattened Fields + Binary Files
         const payload = new FormData();
         
-        // Prepare the JSON data object
-        const jsonData = {
-            student_id: studentIdHidden.value || studentSearchInput.value,
-            student_name: studentNameInput.value,
-            grade: externalMetadata.grade,
-            academic_year: externalMetadata.academic_year,
-            branch: externalMetadata.branch,
-            net_fee_payable: formData.get('net_fee_payable'),
-            concession_type: formData.get('concession_type'),
-            concession_amount: formData.get('concession_amount') || 0,
-            concession_reason: formData.get('concession_reason') || '',
-            total_fee_agreed: totalAgreed,
-            no_of_installments: noOfInstallments,
-            submission_date: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-            installments: []
-        };
+        // Add Metadata directly to the body
+        payload.append('student_id', studentIdHidden.value || studentSearchInput.value);
+        payload.append('student_name', studentNameInput.value);
+        payload.append('grade', externalMetadata.grade);
+        payload.append('academic_year', externalMetadata.academic_year);
+        payload.append('branch', externalMetadata.branch);
+        payload.append('net_fee_payable', formData.get('net_fee_payable'));
+        payload.append('concession_type', formData.get('concession_type'));
+        payload.append('concession_amount', formData.get('concession_amount') || 0);
+        payload.append('concession_reason', formData.get('concession_reason') || '');
+        payload.append('total_fee_agreed', totalAgreed);
+        payload.append('no_of_installments', noOfInstallments);
+        payload.append('submission_date', new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
 
         const MAX_SIZE = 5 * 1024 * 1024; // 5MB
         
@@ -428,15 +425,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const status = formData.get(`inst_${i}_status`) === 'on' ? 'Cleared' : 'Pending';
             const amount = formData.get(`inst_${i}_amount`);
 
-            const inst = {
-                id: i,
-                mode: mode,
-                status: status,
-                amount: amount
-            };
+            // Add basic installment fields
+            payload.append(`inst_${i}_mode`, mode);
+            payload.append(`inst_${i}_status`, status);
+            payload.append(`inst_${i}_amount`, amount);
 
             if (mode === 'UPI') {
-                inst.txn_id = formData.get(`inst_${i}_txn_id`);
+                payload.append(`inst_${i}_txn_id`, formData.get(`inst_${i}_txn_id`));
                 const file = formData.get(`inst_${i}_screenshot`);
                 if (file && file.size > 0) {
                     if (file.size > MAX_SIZE) {
@@ -446,9 +441,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     payload.append(`inst_${i}_file`, file);
                 }
             } else if (mode === 'Cheque') {
-                inst.date = formData.get(`inst_${i}_date`);
-                inst.cheque_no = formData.get(`inst_${i}_cheque_no`);
-                inst.bank = formData.get(`inst_${i}_bank`);
+                payload.append(`inst_${i}_date`, formData.get(`inst_${i}_date`));
+                payload.append(`inst_${i}_cheque_no`, formData.get(`inst_${i}_cheque_no`));
+                payload.append(`inst_${i}_bank`, formData.get(`inst_${i}_bank`));
                 
                 const file = formData.get(`inst_${i}_cheque_copy`);
                 if (file && file.size > 0) {
@@ -459,13 +454,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     payload.append(`inst_${i}_file`, file);
                 }
             }
-            jsonData.installments.push(inst);
         }
 
-        // Add stringified JSON under 'jsonData'
-        payload.append('jsonData', JSON.stringify(jsonData));
-
-        console.log('Submitting Binary Payload (Clean JSON + Files)...');
+        console.log('Submitting Flattened Binary Payload...');
 
         try {
             const response = await fetch(WEBHOOK_URL, {
