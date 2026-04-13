@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const depositDateGroup = block.querySelector(`#inst_${i}_deposit_date_group`);
                 const depositDateInput = block.querySelector(`[name="inst_${i}_deposit_cleared_date"]`);
                 if (depositDateGroup) {
-                    if (statusToggle.checked && modeSelect.value === 'Cheque') {
+                    if (statusToggle.checked && modeSelect.value) {
                         depositDateGroup.style.display = 'flex';
                         if (depositDateInput) depositDateInput.required = true;
                     } else {
@@ -315,6 +315,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Amount Paid <span class="required">*</span></label>
                     <input type="number" name="inst_${index}_amount" placeholder="Enter amount" required min="0">
                 </div>
+                <div class="input-group deposit-cleared-date-group" id="inst_${index}_deposit_date_group" style="display: none;">
+                    <label>Deposit Cleared/Paid Date <span class="required">*</span></label>
+                    <input type="date" name="inst_${index}_deposit_cleared_date">
+                </div>
             `;
         } else if (mode === 'UPI') {
             container.innerHTML = `
@@ -325,6 +329,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="input-group">
                     <label>Transaction ID <span class="required">*</span></label>
                     <input type="text" name="inst_${index}_txn_id" placeholder="Enter UPI Txn ID" required>
+                </div>
+                <div class="input-group deposit-cleared-date-group" id="inst_${index}_deposit_date_group" style="display: none;">
+                    <label>Deposit Cleared/Paid Date <span class="required">*</span></label>
+                    <input type="date" name="inst_${index}_deposit_cleared_date">
                 </div>
             `;
         } else if (mode === 'Cheque') {
@@ -352,7 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="dropdown-list account-holder-list"></div>
                 </div>
                 <div class="input-group deposit-cleared-date-group" id="inst_${index}_deposit_date_group" style="display: none;">
-                    <label>Deposit Cleared Date <span class="required">*</span></label>
+                    <label>Deposit Cleared/Paid Date <span class="required">*</span></label>
                     <input type="date" name="inst_${index}_deposit_cleared_date">
                 </div>
             `;
@@ -506,9 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 inst.cheque_no = formData.get(`inst_${i}_cheque_no`);
                 inst.bank_name = formData.get(`inst_${i}_bank`);
                 inst.account_holder = formData.get(`inst_${i}_account_holder`);
-                if (status === 'Cleared') {
-                    inst.deposit_cleared_date = formData.get(`inst_${i}_deposit_cleared_date`);
-                }
+            }
+            if (status === 'Cleared') {
+                inst.deposit_cleared_date = formData.get(`inst_${i}_deposit_cleared_date`);
             }
             payload.installments.push(inst);
         }
