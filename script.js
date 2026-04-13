@@ -256,6 +256,23 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const statusToggle = block.querySelector(`#status_toggle_${i}`);
             const statusLabel = block.querySelector(`#status_label_${i}`);
+            const modeSelect = block.querySelector('.payment-mode');
+            const fieldsContainer = block.querySelector('.mode-specific-fields');
+
+            const toggleDepositDate = () => {
+                const depositDateGroup = block.querySelector(`#inst_${i}_deposit_date_group`);
+                const depositDateInput = block.querySelector(`[name="inst_${i}_deposit_cleared_date"]`);
+                if (depositDateGroup) {
+                    if (statusToggle.checked && modeSelect.value === 'Cheque') {
+                        depositDateGroup.style.display = 'flex';
+                        if (depositDateInput) depositDateInput.required = true;
+                    } else {
+                        depositDateGroup.style.display = 'none';
+                        if (depositDateInput) depositDateInput.required = false;
+                        if (depositDateInput) depositDateInput.value = '';
+                    }
+                }
+            };
 
             statusToggle.addEventListener('change', () => {
                 if (statusToggle.checked) {
@@ -265,13 +282,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     statusLabel.textContent = 'PENDING';
                     statusLabel.className = 'status-label pending';
                 }
+                toggleDepositDate();
             });
-            
-            const modeSelect = block.querySelector('.payment-mode');
-            const fieldsContainer = block.querySelector('.mode-specific-fields');
             
             modeSelect.addEventListener('change', () => {
                 renderModeFields(modeSelect.value, fieldsContainer, i);
+                toggleDepositDate();
             });
             
             installmentsContainer.appendChild(block);
@@ -319,6 +335,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Bank Name <span class="required">*</span></label>
                     <input type="text" class="bank-search" name="inst_${index}_bank" placeholder="Search Bank..." required autocomplete="off">
                     <div class="dropdown-list bank-list"></div>
+                </div>
+                <div class="input-group deposit-cleared-date-group" id="inst_${index}_deposit_date_group" style="display: none;">
+                    <label>Deposit Cleared Date <span class="required">*</span></label>
+                    <input type="date" name="inst_${index}_deposit_cleared_date">
                 </div>
             `;
             
@@ -429,9 +449,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 inst.clearance_date = formData.get(`inst_${i}_date`);
                 inst.cheque_no = formData.get(`inst_${i}_cheque_no`);
                 inst.bank_name = formData.get(`inst_${i}_bank`);
+                if (status === 'Cleared') {
+                    inst.deposit_cleared_date = formData.get(`inst_${i}_deposit_cleared_date`);
+                }
             }
             payload.installments.push(inst);
         }
+
+        let Total_Collected = 0;
+        payload.installments.forEach(inst => {
+            if (inst.installment_status === 'Cleared') {
+                Total_Collected += (inst.amount || 0);
+            }
+        });
+        
+        const Amount_Outstanding = totalAgreed - Total_Collected;
+        
+        let Collection_Pct = 0;
+        if (totalAgreed > 0) {
+            Collection_Pct = parseFloat(((Total_Collected / totalAgreed) * 100).toFixed(2));
+        }
+
+        payload.Total_Collected = Total_Collected;
+        payload.Amount_Outstanding = Amount_Outstanding;
+        payload.Collection_Pct = Collection_Pct;
 
         console.log('Submitting Payload:', payload);
 
