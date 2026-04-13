@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Fetch Student Data
     async function fetchStudents() {
-        if (studentIdHidden.value) return; // Skip fetch if pre-filled via URL
         try {
             const data = await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
@@ -86,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const cols = data.table.cols;
             let idIdx = 0, firstIdx = 1, lastIdx = 2;
+            let primaryContactIdx = -1, secondaryContactIdx = -1;
 
             if (cols) {
                 const idCol = cols.findIndex(c => (c.label||'').toLowerCase().includes('student_id'));
@@ -94,6 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (fCol !== -1) firstIdx = fCol;
                 const lCol = cols.findIndex(c => (c.label||'').toLowerCase().includes('last'));
                 if (lCol !== -1) lastIdx = lCol;
+                primaryContactIdx = cols.findIndex(c => (c.label||'').toLowerCase().includes('primary_contact_name'));
+                secondaryContactIdx = cols.findIndex(c => (c.label||'').toLowerCase().includes('secondary_contact_name'));
             }
 
             allStudents = data.table.rows.map(row => {
@@ -107,8 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fname = (c[firstIdx] && c[firstIdx].v) ? String(c[firstIdx].v).trim() : '';
                 const lname = (c[lastIdx] && c[lastIdx].v) ? String(c[lastIdx].v).trim() : '';
                 const fullName = `${fname} ${lname}`.trim();
+
+                const primaryContact = (primaryContactIdx !== -1 && c[primaryContactIdx] && c[primaryContactIdx].v) ? String(c[primaryContactIdx].v).trim() : '';
+                const secondaryContact = (secondaryContactIdx !== -1 && c[secondaryContactIdx] && c[secondaryContactIdx].v) ? String(c[secondaryContactIdx].v).trim() : '';
                 
-                return { id: sid, name: fullName || 'No Name' };
+                return { 
+                    id: sid, 
+                    name: fullName || 'No Name',
+                    primaryContact: primaryContact,
+                    secondaryContact: secondaryContact
+                };
             }).filter(s => s !== null);
 
             renderStudentDropdown(allStudents);
@@ -324,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="number" name="inst_${index}_amount" placeholder="Enter amount" required min="0">
                 </div>
                 <div class="input-group">
-                    <label>Clearance Date <span class="required">*</span></label>
+                    <label>Cheque Date <span class="required">*</span></label>
                     <input type="date" name="inst_${index}_date" required>
                 </div>
                 <div class="input-group">
@@ -336,6 +346,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="text" class="bank-search" name="inst_${index}_bank" placeholder="Search Bank..." required autocomplete="off">
                     <div class="dropdown-list bank-list"></div>
                 </div>
+                <div class="input-group searchable-dropdown">
+                    <label>Account Holder <span class="required">*</span></label>
+                    <input type="text" class="account-holder-search" name="inst_${index}_account_holder" placeholder="Select or type name..." required autocomplete="off">
+                    <div class="dropdown-list account-holder-list"></div>
+                </div>
                 <div class="input-group deposit-cleared-date-group" id="inst_${index}_deposit_date_group" style="display: none;">
                     <label>Deposit Cleared Date <span class="required">*</span></label>
                     <input type="date" name="inst_${index}_deposit_cleared_date">
@@ -343,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             
             setupBankDropdown(container.querySelector('.bank-search'), container.querySelector('.bank-list'));
+            setupAccountHolderDropdown(container.querySelector('.account-holder-search'), container.querySelector('.account-holder-list'));
         }
 
         // Add real-time sum listener to any amount input that appears
@@ -377,6 +393,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
         input.addEventListener('focus', () => renderBanks(input.value));
         input.addEventListener('input', () => renderBanks(input.value));
+        
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !list.contains(e.target)) {
+                list.classList.remove('active');
+            }
+        });
+    }
+
+    function setupAccountHolderDropdown(input, list) {
+        const sid = studentIdHidden.value || studentSearchInput.value;
+        const student = allStudents.find(s => s.id === sid);
+        
+        const options = [];
+        if (student) {
+            if (student.primaryContact) options.push(student.primaryContact);
+            if (student.secondaryContact) options.push(student.secondaryContact);
+        }
+        
+        const renderList = (query = '') => {
+            list.innerHTML = '';
+            const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+            if (filtered.length > 0) {
+                list.classList.add('active');
+                filtered.forEach(opt => {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item';
+                    div.textContent = opt;
+                    div.onclick = () => {
+                        input.value = opt;
+                        list.classList.remove('active');
+                    };
+                    list.appendChild(div);
+                });
+            } else {
+                list.classList.remove('active');
+            }
+        };
+
+        input.addEventListener('focus', () => renderList(input.value));
+        input.addEventListener('input', () => renderList(input.value));
         
         document.addEventListener('click', (e) => {
             if (!input.contains(e.target) && !list.contains(e.target)) {
@@ -446,9 +502,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 inst.transaction_id = formData.get(`inst_${i}_txn_id`);
             } else if (mode === 'Cheque') {
                 inst.amount = parseFloat(formData.get(`inst_${i}_amount`));
-                inst.clearance_date = formData.get(`inst_${i}_date`);
+                inst.cheque_date = formData.get(`inst_${i}_date`);
                 inst.cheque_no = formData.get(`inst_${i}_cheque_no`);
                 inst.bank_name = formData.get(`inst_${i}_bank`);
+                inst.account_holder = formData.get(`inst_${i}_account_holder`);
                 if (status === 'Cleared') {
                     inst.deposit_cleared_date = formData.get(`inst_${i}_deposit_cleared_date`);
                 }
