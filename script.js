@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('feeForm');
     const studentSearchInput = document.getElementById('student_id_search');
     const studentList = document.getElementById('studentList');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const installmentsSection = document.getElementById('installmentsSection');
     const installmentsContainer = document.getElementById('installmentsContainer');
 
-    const WEBHOOK_URL = 'https://n8n.srv1498466.hstgr.cloud/webhook/9992f675-cf22-4277-b259-d6cb6d6dcafa';
+    const WEBHOOK_URL = 'https://n8n.srv1761768.hstgr.cloud/webhook/9992f675-cf22-4277-b259-d6cb6d6dcafa';
     const SHEET_ID = '16JAViFIXgf0oDqC5Nl0V6UpGqKrUVGAHkoEeYw1LdGs';
     const GID = '91172728';
 
