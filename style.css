@@ -292,76 +292,146 @@ select {
     to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 600px) {
-    .grid-row, .mode-specific-fields {
-        grid-template-columns: 1fr !important;
-    }
-}
-
-/* Status Toggle Switch */
-.status-toggle-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+/* Status Radio Buttons */
+.status-radio-wrapper {
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px dashed #eee;
 }
 
-.status-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    min-width: 70px;
+.status-radio-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4b4b4b;
+    margin-bottom: 10px;
 }
 
-.status-label.pending { color: #f39c12; }
-.status-label.cleared { color: #27ae60; }
-
-.status-switch {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 30px;
+.status-radio-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
-.status-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.status-slider {
-    position: absolute;
+.status-radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border: 2px solid #dfe6e9;
+    border-radius: 8px;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #f1f2f6;
-    transition: .4s;
-    border-radius: 34px;
-    border: 1px solid #ddd;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    user-select: none;
+    letter-spacing: 0.3px;
 }
 
-.status-slider:before {
-    position: absolute;
-    content: "";
-    height: 22px;
-    width: 22px;
-    left: 4px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.status-radio-option input[type="radio"] {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
-input:checked + .status-slider {
-    background-color: #27ae60;
-    border-color: #27ae60;
+.cleared-option { border-color: #27ae60; color: #27ae60; }
+.cleared-option:has(input:checked) { background: #27ae60; color: white; }
+.cleared-option input[type="radio"] { accent-color: #27ae60; }
+
+.pdc-option { border-color: #2980b9; color: #2980b9; }
+.pdc-option:has(input:checked) { background: #2980b9; color: white; }
+.pdc-option input[type="radio"] { accent-color: #2980b9; }
+
+.pending-option { border-color: #f39c12; color: #f39c12; }
+.pending-option:has(input:checked) { background: #f39c12; color: white; }
+.pending-option input[type="radio"] { accent-color: #f39c12; }
+
+/* Full-width grid span for special fields */
+.mode-specific-fields .input-group.full-width {
+    grid-column: 1 / -1;
 }
 
-input:checked + .status-slider:before {
-    transform: translateX(30px);
+/* Cheque details sub-grid (spans full width of parent grid) */
+.cheque-details {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+.cheque-details .input-group.full-width {
+    grid-column: 1 / -1;
+}
+
+/* "Other" option — pinned at top, visually distinct */
+.dropdown-item.other-option {
+    border-bottom: 1px solid var(--border-color);
+    font-style: italic;
+    color: var(--secondary-color);
+    font-weight: 600;
+}
+
+/* Promised date field */
+.promised-date-group {
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    body {
+        padding: 12px 10px;
+    }
+
+    .form-container {
+        padding: 20px 16px;
+        border-radius: 14px;
+    }
+
+    .brand-name {
+        font-size: 1.3rem;
+    }
+
+    .form-title {
+        font-size: 1.1rem;
+    }
+
+    .grid-row,
+    .mode-specific-fields {
+        grid-template-columns: 1fr !important;
+    }
+
+    .mode-specific-fields .input-group.full-width {
+        grid-column: 1;
+    }
+
+    .cheque-details {
+        grid-template-columns: 1fr;
+    }
+
+    .status-radio-group {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .status-radio-option {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .submit-btn {
+        font-size: 1rem;
+        padding: 14px;
+    }
+
+    input, select, textarea {
+        font-size: 16px; /* prevents iOS zoom on focus */
+    }
+
+    .installment-block {
+        padding: 14px;
+    }
 }

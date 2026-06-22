@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Fee Management — Automated Test Runner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0f172a; color: #e2e8f0; padding: 24px; }
+        h1 { color: #38bdf8; margin-bottom: 8px; font-size: 1.6rem; }
+        .subtitle { color: #94a3b8; margin-bottom: 24px; }
+        .test-group { margin-bottom: 20px; background: #1e293b; border-radius: 12px; padding: 16px 20px; }
+        .test-group h2 { font-size: 1rem; color: #f59e0b; margin-bottom: 12px; }
+        .test-item { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 0.9rem; }
+        .test-item:last-child { border-bottom: none; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; min-width: 50px; text-align: center; flex-shrink: 0; }
+        .pass { background: #166534; color: #4ade80; }
+        .fail { background: #7f1d1d; color: #fca5a5; }
+        .warn { background: #713f12; color: #fbbf24; }
+        .test-desc { flex: 1; }
+        .summary { margin-top: 20px; padding: 20px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; text-align: center; }
+        .summary.all-pass { background: #166534; color: #4ade80; }
+        .summary.has-fail { background: #7f1d1d; color: #fca5a5; }
+        #status { color: #94a3b8; margin-bottom: 16px; font-style: italic; }
+        iframe { display: none; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Student Fee Management — Test Report</h1>
+    <p class="subtitle">Automated checks for all 7 requirements</p>
+    <div id="status">Loading form and running tests...</div>
+    <div id="results"></div>
+    <iframe id="formFrame" src="index.html" width="1024" height="2000"></iframe>
+
+    <script>
+    const iframe = document.getElementById('formFrame');
+    const results = [];
+    let doc, win;
+
+    function log(group, name, pass, note = '') {
+        results.push({ group, name, pass, note });
+    }
+
+    function warn(group, name, note = '') {
+        results.push({ group, name, pass: 'warn', note });
+    }
+
+    iframe.onload = () => {
+        // Wait a bit for JS to initialize
+        setTimeout(runAllTests, 2000);
+    };
+
+    async function runAllTests() {
+        doc = iframe.contentDocument || iframe.contentWindow.document;
+        win = iframe.contentWindow;
+
+        // ===== TEST GROUP 1: Payment Status Radio Buttons =====
+        const g1 = '1. Payment Status — Radio Buttons';
+
+        // Check no toggle switch exists
+        const toggles = doc.querySelectorAll('.status-switch, .status-slider');
+        log(g1, 'Old toggle switch removed', toggles.length === 0, toggles.length > 0 ? `Found ${toggles.length} old toggle elements` : '');
+
+        // Generate installments first
+        const instInput = doc.getElementById('no_of_installments');
+        setNativeValue(instInput, '2');
+        instInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+        await delay(500);
+
+        // Check radio buttons exist
+        const radios1 = doc.querySelectorAll('[name="inst_1_status"]');
+        log(g1, 'Radio buttons generated for installment', radios1.length === 3, `Found ${radios1.length} radio buttons (expected 3)`);
+
+        // Check order: Cleared, PDC, Pending
+        const radioValues = Array.from(radios1).map(r => r.value);
+        const correctOrder = radioValues[0] === 'Cleared' && radioValues[1] === 'PDC' && radioValues[2] === 'Pending';
+        log(g1, 'Order: Cleared → PDC → Pending', correctOrder, `Actual order: ${radioValues.join(' → ')}`);
+
+        // Check Pending is default
+        const defaultChecked = doc.querySelector('[name="inst_1_status"]:checked');
+        log(g1, 'Pending is default selected', defaultChecked && defaultChecked.value === 'Pending', `Default: ${defaultChecked ? defaultChecked.value : 'none'}`);
+
+        // Check Promised Date visible for Pending
+        const promisedGroup1 = doc.getElementById('inst_1_promised_date_group');
+        log(g1, 'Promised Date shown when Pending', promisedGroup1 && promisedGroup1.style.display !== 'none', `Display: ${promisedGroup1 ? promisedGroup1.style.display : 'missing'}`);
+
+        // Click Cleared, check Promised Date hides
+        const clearedRadio = doc.querySelector('[name="inst_1_status"][value="Cleared"]');
+        clearedRadio.click();
+        await delay(200);
+        log(g1, 'Promised Date hidden when Cleared', promisedGroup1.style.display === 'none', `Display: ${promisedGroup1.style.display}`);
+
+        // Click PDC, check Promised Date still hidden
+        const pdcRadio = doc.querySelector('[name="inst_1_status"][value="PDC"]');
+        pdcRadio.click();
+        await delay(200);
+        log(g1, 'Promised Date hidden when PDC', promisedGroup1.style.display === 'none', `Display: ${promisedGroup1.style.display}`);
+
+        // Click back to Pending, Promised Date reappears
+        const pendingRadio = doc.querySelector('[name="inst_1_status"][value="Pending"]');
+        pendingRadio.click();
+        await delay(200);
+        log(g1, 'Promised Date reappears when Pending clicked again', promisedGroup1.style.display !== 'none', `Display: ${promisedGroup1.style.display}`);
+
+        // ===== TEST GROUP 2: Bank Details =====
+        const g2 = '2. Bank Details';
+
+        const BANKS = win.eval ? null : null; // Can't access directly, check from DOM
+        // Select Cheque mode for installment 2
+        const mode2 = doc.querySelector('[name="inst_2_mode"]');
+        setNativeValue(mode2, 'Cheque');
+        mode2.dispatchEvent(new Event('change', { bubbles: true }));
+        await delay(500);
+
+        const bankSearch = doc.querySelector('#inst_2_fields .bank-search');
+        log(g2, 'Bank search field exists for Cheque mode', !!bankSearch, '');
+
+        // Type "Abhyudaya" to search
+        if (bankSearch) {
+            bankSearch.focus();
+            setNativeValue(bankSearch, 'Abhyudaya');
+            bankSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            await delay(300);
+
+            const bankList = doc.querySelector('#inst_2_fields .bank-list');
+            const items = bankList ? bankList.querySelectorAll('.dropdown-item') : [];
+            const abhyFound = Array.from(items).some(item => item.textContent.includes('Abhyudaya'));
+            log(g2, 'Abhyudaya Co-operative Bank in dropdown', abhyFound, `Dropdown items: ${Array.from(items).map(i => i.textContent).join(', ')}`);
+
+            // Search GP Parsik
+            setNativeValue(bankSearch, 'GP Parsik');
+            bankSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            await delay(300);
+
+            const items2 = bankList.querySelectorAll('.dropdown-item');
+            const gpFound = Array.from(items2).some(item => item.textContent.includes('GP Parsik'));
+            log(g2, 'GP Parsik Sahakari Bank in dropdown', gpFound, `Found: ${Array.from(items2).map(i => i.textContent).join(', ')}`);
+
+            // Search "Other"
+            setNativeValue(bankSearch, 'Other');
+            bankSearch.dispatchEvent(new Event('input', { bubbles: true }));
+            await delay(300);
+
+            const items3 = bankList.querySelectorAll('.dropdown-item');
+            const otherFound = Array.from(items3).some(item => item.textContent === 'Other');
+            log(g2, '"Other" option exists in bank dropdown', otherFound, '');
+
+            // Click "Other"
+            const otherItem = Array.from(items3).find(item => item.textContent === 'Other');
+            if (otherItem) otherItem.click();
+            await delay(300);
+
+            const bankOtherGroup = doc.getElementById('inst_2_bank_other_group');
+            log(g2, 'Bank Name (Manual Entry) appears on Other', bankOtherGroup && bankOtherGroup.style.display !== 'none', `Display: ${bankOtherGroup ? bankOtherGroup.style.display : 'missing'}`);
+
+            const accOtherGroup = doc.getElementById('inst_2_accholder_other_group');
+            log(g2, 'Account Holder Name (manual) appears on Other', accOtherGroup && accOtherGroup.style.display !== 'none', `Display: ${accOtherGroup ? accOtherGroup.style.display : 'missing'}`);
+
+            const accDropdown = doc.getElementById('inst_2_accholder_dropdown');
+            log(g2, 'Account Holder dropdown hidden on Other', accDropdown && accDropdown.style.display === 'none', `Display: ${accDropdown ? accDropdown.style.display : 'missing'}`);
+        }
+
+        // ===== TEST GROUP 3: Mobile View CSS =====
+        const g3 = '3. Mobile View CSS';
+
+        const styleSheets = Array.from(doc.styleSheets);
+        let hasMediaQuery = false;
+        let hasGridOverride = false;
+        let hasRadioStack = false;
+        let hasIOSFix = false;
+
+        try {
+            for (const sheet of styleSheets) {
+                try {
+                    for (const rule of sheet.cssRules) {
+                        if (rule instanceof CSSMediaRule && rule.conditionText && rule.conditionText.includes('640px')) {
+                            hasMediaQuery = true;
+                            for (const innerRule of rule.cssRules) {
+                                const css = innerRule.cssText;
+                                if (css.includes('grid-template-columns') && css.includes('1fr')) hasGridOverride = true;
+                                if (css.includes('flex-direction') && css.includes('column') && css.includes('status-radio-group')) hasRadioStack = true;
+                                if (css.includes('font-size') && css.includes('16px')) hasIOSFix = true;
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+        } catch(e) {}
+
+        log(g3, 'Mobile media query exists (@media max-width: 640px)', hasMediaQuery, '');
+        log(g3, 'Grid stacks to 1 column on mobile', hasGridOverride, '');
+        log(g3, 'Radio buttons stack vertically on mobile', hasRadioStack, '');
+        log(g3, 'iOS zoom fix (font-size: 16px)', hasIOSFix, '');
+
+        // ===== TEST GROUP 4: Cash/Cheque — Received By =====
+        const g4 = '4. Cash/Cheque — Received By Field';
+
+        // Cash mode for inst 1
+        const mode1 = doc.querySelector('[name="inst_1_mode"]');
+        setNativeValue(mode1, 'Cash');
+        mode1.dispatchEvent(new Event('change', { bubbles: true }));
+        await delay(500);
+
+        const cashReceivedBy = doc.querySelector('[name="inst_1_received_by"]');
+        log(g4, 'Cash mode has "Received By" field', !!cashReceivedBy, '');
+        if (cashReceivedBy) {
+            log(g4, 'Cash Received By is required', cashReceivedBy.required === true, `required: ${cashReceivedBy.required}`);
+        }
+
+        // Cheque mode already set for inst 2, check received_by
+        const chequeReceivedBy = doc.querySelector('[name="inst_2_received_by"]');
+        log(g4, 'Cheque mode has "Received By" field', !!chequeReceivedBy, '');
+        if (chequeReceivedBy) {
+            log(g4, 'Cheque Received By is required', chequeReceivedBy.required === true, `required: ${chequeReceivedBy.required}`);
+        }
+
+        // Check UPI mode for comparison
+        setNativeValue(mode1, 'UPI');
+        mode1.dispatchEvent(new Event('change', { bubbles: true }));
+        await delay(500);
+        const upiReceivedBy = doc.querySelector('[name="inst_1_received_by"]');
+        warn(g4, 'UPI mode does NOT have "Received By" (as designed — Cash/Cheque only)', !upiReceivedBy ? `Not present (matches requirement)` : 'Present — unexpected');
+
+        // ===== TEST GROUP 5: Field Order — Fee Section =====
+        const g5 = '5. Field Order — Fee Section';
+
+        const totalFeeLabel = doc.querySelector('label[for="net_fee_payable"]');
+        const netFeeLabel = doc.querySelector('label[for="total_fee_agreed"]');
+        log(g5, 'First field labeled "Total Fee"', totalFeeLabel && totalFeeLabel.textContent.includes('Total Fee'), `Label text: "${totalFeeLabel ? totalFeeLabel.textContent.trim() : 'missing'}"`);
+        log(g5, 'Computed field labeled "Net Fee Payable"', netFeeLabel && netFeeLabel.textContent.includes('Net Fee Payable'), `Label text: "${netFeeLabel ? netFeeLabel.textContent.trim() : 'missing'}"`);
+
+        // Check no "Concession Fee" tab/label exists
+        const allLabels = Array.from(doc.querySelectorAll('label')).map(l => l.textContent.trim());
+        const hasConcessionFeeTab = allLabels.some(l => l.toLowerCase() === 'concession fee');
+        log(g5, 'No separate "Concession Fee" tab exists', !hasConcessionFeeTab, '');
+
+        // Check calculation: Total - Concession = Net
+        const totalFeeInput = doc.getElementById('net_fee_payable');
+        const concessionInput = doc.getElementById('concession_amount');
+        const netFeeInput = doc.getElementById('total_fee_agreed');
+
+        setNativeValue(totalFeeInput, '50000');
+        totalFeeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        setNativeValue(concessionInput, '5000');
+        concessionInput.dispatchEvent(new Event('input', { bubbles: true }));
+        await delay(300);
+
+        const netValue = parseFloat(netFeeInput.value);
+        log(g5, 'Net Fee = Total Fee - Concession (50000-5000=45000)', netValue === 45000, `Calculated: ${netValue}`);
+
+        // Check field IDs vs labels mismatch (BUG)
+        warn(g5, 'BUG: Field ID "net_fee_payable" is labeled "Total Fee" — IDs are semantically inverted',
+            'The payload key "net_fee_payable" sends the GROSS fee. Backend schema may be misleading.');
+
+        // ===== TEST GROUP 6: Concession Type — Referral Discount =====
+        const g6 = '6. Concession Type — Referral Discount';
+
+        const concTypeSelect = doc.getElementById('concession_type');
+        const options = Array.from(concTypeSelect.options).map(o => o.value);
+        log(g6, '"Referral Discount" exists in Concession Type', options.includes('Referral Discount'), `Options: ${options.join(', ')}`);
+        log(g6, 'Other options intact (None, Discount, Waiver)', 
+            options.includes('None') && options.includes('Discount') && options.includes('Waiver'), 
+            `Options: ${options.join(', ')}`);
+
+        // ===== TEST GROUP 7: Reminders (Data Fields) =====
+        const g7 = '7. Reminders — Data in Payload';
+
+        // Set inst 1 to Pending and check promised_date field exists
+        setNativeValue(mode1, 'Cash');
+        mode1.dispatchEvent(new Event('change', { bubbles: true }));
+        await delay(200);
+        const pendRadio1 = doc.querySelector('[name="inst_1_status"][value="Pending"]');
+        pendRadio1.click();
+        await delay(200);
+
+        const promisedDateInput = doc.querySelector('[name="inst_1_promised_date"]');
+        log(g7, 'Pending → "promised_date" field exists', !!promisedDateInput, '');
+        
+        const promDateRequired = promisedDateInput ? promisedDateInput.required : false;
+        warn(g7, 'Promised Date is NOT required (could submit Pending without date)', 
+            `required=${promDateRequired}. Consider making it required for reminders to work.`);
+
+        // PDC cheque date
+        const chequeDate = doc.querySelector('[name="inst_2_date"]');
+        log(g7, 'PDC/Cheque → "cheque_date" field exists', !!chequeDate, '');
+
+        warn(g7, 'No frontend reminder/notification logic exists',
+            'Reminder sending must be handled by backend/n8n workflow. Data fields are present in payload.');
+
+        // ===== BONUS: CSS Styling Checks =====
+        const g8 = 'Bonus: Styling & UX';
+
+        const clearedCss = doc.querySelector('.cleared-option');
+        const pdcCss = doc.querySelector('.pdc-option');
+        const pendingCss = doc.querySelector('.pending-option');
+        log(g8, 'Cleared radio has green styling class', !!clearedCss, '');
+        log(g8, 'PDC radio has blue styling class', !!pdcCss, '');
+        log(g8, 'Pending radio has orange styling class', !!pendingCss, '');
+
+        // Check for old toggle CSS classes in DOM
+        const oldToggle = doc.querySelector('.status-switch') || doc.querySelector('.status-slider');
+        log(g8, 'No old toggle switch CSS classes in DOM', !oldToggle, '');
+
+        // ===== RENDER RESULTS =====
+        renderResults();
+    }
+
+    function setNativeValue(el, val) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set 
+            || Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+        if (nativeInputValueSetter) {
+            nativeInputValueSetter.call(el, val);
+        } else {
+            el.value = val;
+        }
+    }
+
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function renderResults() {
+        document.getElementById('status').style.display = 'none';
+        const container = document.getElementById('results');
+        
+        const groups = {};
+        results.forEach(r => {
+            if (!groups[r.group]) groups[r.group] = [];
+            groups[r.group].push(r);
+        });
+
+        let totalPass = 0, totalFail = 0, totalWarn = 0;
+
+        for (const [groupName, tests] of Object.entries(groups)) {
+            const div = document.createElement('div');
+            div.className = 'test-group';
+            div.innerHTML = `<h2>${groupName}</h2>`;
+            
+            tests.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'test-item';
+                let badgeClass, badgeText;
+                if (t.pass === 'warn') {
+                    badgeClass = 'warn'; badgeText = 'WARN'; totalWarn++;
+                } else if (t.pass) {
+                    badgeClass = 'pass'; badgeText = 'PASS'; totalPass++;
+                } else {
+                    badgeClass = 'fail'; badgeText = 'FAIL'; totalFail++;
+                }
+                item.innerHTML = `
+                    <span class="badge ${badgeClass}">${badgeText}</span>
+                    <span class="test-desc">${t.name}${t.note ? ` <span style="color:#94a3b8;font-size:0.8rem;">— ${t.note}</span>` : ''}</span>
+                `;
+                div.appendChild(item);
+            });
+            
+            container.appendChild(div);
+        }
+
+        const summary = document.createElement('div');
+        summary.className = `summary ${totalFail > 0 ? 'has-fail' : 'all-pass'}`;
+        summary.textContent = `✅ ${totalPass} PASSED  |  ❌ ${totalFail} FAILED  |  ⚠️ ${totalWarn} WARNINGS`;
+        container.appendChild(summary);
+    }
+    </script>
+</body>
+</html>
