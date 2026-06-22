@@ -280,6 +280,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (depositInput) { depositInput.required = show; if (!show) depositInput.value = ''; }
                 }
 
+                // Cash: hide Received By when Pending (no one has received anything yet)
+                if (mode === 'Cash') {
+                    const receivedByGroup = block.querySelector(`#inst_${i}_received_by_group`);
+                    if (receivedByGroup) {
+                        const showRcvd = status !== 'Pending';
+                        const inp = receivedByGroup.querySelector('input');
+                        receivedByGroup.style.display = showRcvd ? 'flex' : 'none';
+                        if (inp) { inp.required = showRcvd; if (!showRcvd) inp.value = ''; }
+                    }
+                }
+
                 // Cheque-specific: cheque details hidden when Pending, submission date shown when PDC
                 if (mode === 'Cheque') {
                     const chequeDetails = block.querySelector(`#inst_${i}_cheque_details`);
@@ -325,9 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Amount Paid <span class="required">*</span></label>
                     <input type="number" name="inst_${index}_amount" placeholder="Enter amount" required min="0">
                 </div>
-                <div class="input-group">
+                <div class="input-group" id="inst_${index}_received_by_group" style="display:none;">
                     <label>Received By <span class="required">*</span></label>
-                    <input type="text" name="inst_${index}_received_by" placeholder="Staff name" required>
+                    <input type="text" name="inst_${index}_received_by" placeholder="Staff name">
                 </div>
                 <div class="input-group full-width" id="inst_${index}_deposit_date_group" style="display:none;">
                     <label>Deposit Cleared / Paid Date <span class="required">*</span></label>
