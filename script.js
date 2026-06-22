@@ -280,6 +280,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (depositInput) { depositInput.required = show; if (!show) depositInput.value = ''; }
                 }
 
+                // UPI: hide Transaction ID when Pending (no txn has happened yet)
+                if (mode === 'UPI') {
+                    const txnIdGroup = block.querySelector(`#inst_${i}_txn_id_group`);
+                    if (txnIdGroup) {
+                        const showTxn = status !== 'Pending';
+                        const inp = txnIdGroup.querySelector('input');
+                        txnIdGroup.style.display = showTxn ? 'flex' : 'none';
+                        if (inp) { inp.required = showTxn; if (!showTxn) inp.value = ''; }
+                    }
+                }
+
                 // Cash: hide Received By when Pending (no one has received anything yet)
                 if (mode === 'Cash') {
                     const receivedByGroup = block.querySelector(`#inst_${i}_received_by_group`);
@@ -351,9 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label>Amount Paid <span class="required">*</span></label>
                     <input type="number" name="inst_${index}_amount" placeholder="Enter amount" required min="0">
                 </div>
-                <div class="input-group">
+                <div class="input-group" id="inst_${index}_txn_id_group" style="display:none;">
                     <label>Transaction ID <span class="required">*</span></label>
-                    <input type="text" name="inst_${index}_txn_id" placeholder="Enter UPI Txn ID" required>
+                    <input type="text" name="inst_${index}_txn_id" placeholder="Enter UPI Txn ID">
                 </div>
                 <div class="input-group full-width" id="inst_${index}_deposit_date_group" style="display:none;">
                     <label>Deposit Cleared / Paid Date <span class="required">*</span></label>
